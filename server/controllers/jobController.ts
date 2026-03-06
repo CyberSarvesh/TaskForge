@@ -1,19 +1,18 @@
 import type { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
+import { query } from "../db/postgres.ts";
+import { addJobToQueue } from "../services/queueService.ts";
 
-const jobs: any = {};
-
-export const createJob = (req: Request, res: Response) => {
+export const createJob = async (req: Request, res: Response) => {
   const id = uuidv4();
+  const { type, payload } = req.body;
 
-  const job = {
-    id,
-    type: req.body.type,
-    payload: req.body.payload,
-    status: "pending",
-  };
+  await query(
+    "INSERT INTO jobs (id, type, payload, status) VALUES ($1,$2,$3,$4)",
+    [id, type, payload, "pending"]
+  );
 
-  jobs[id] = job;
+  await addJobToQueue(id);
 
   res.json({
     message: "Job created",
@@ -21,14 +20,15 @@ export const createJob = (req: Request, res: Response) => {
   });
 };
 
-export const getJob = (req: Request, res: Response) => {
-  const job = jobs[req.params.id];
+export const getJob = async (req: Request, res: Response) => {
+  const result = await query(
+    "SELECT * FROM jobs WHERE id = $1",
+    [req.params.id]
+  );
 
-  if (!job) {
-    return res.status(404).json({
-      error: "Job not found",
-    });
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: "Job not found" });
   }
 
-  res.json(job);
+  res.json(result.rows[0]);
 };
