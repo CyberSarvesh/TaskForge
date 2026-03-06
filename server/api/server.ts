@@ -1,5 +1,6 @@
 import express from "express";
 import jobRoutes from "../routes/jobs.ts";
+import redis from "../redis/redisClient";
 
 const app = express();
 
