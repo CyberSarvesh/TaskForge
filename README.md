@@ -70,4 +70,18 @@ This architecture allows the application to scale efficiently by running multipl
 
 # ▶️ Running The Project Instructions
 
-Start The Backend 
+Download the Dependencies
+
+```
+cd server
+npm i
+```
+Start the server
+```
+npx ts-node api/server.ts
+```
+Run the Workers
+
+```
+npx ts-node worker/worker.ts
+```
