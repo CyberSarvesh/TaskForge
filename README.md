@@ -13,9 +13,6 @@ A separate worker process runs independently from the API server. The worker con
 
 This architecture allows the application to scale efficiently by running multiple worker processes that can handle jobs in parallel.
 
----
-
-# 🗺️ Architecture Model Diagram
 
 ---
 
