@@ -1,6 +1,6 @@
 import { useMemo, useSyncExternalStore } from "react";
 
-export const PAGES = ["jobs", "metrics", "engineering"] as const;
+export const PAGES = ["floor", "jobs", "metrics", "engineering"] as const;
 export type Page = (typeof PAGES)[number];
 
 const subscribe = (notify: () => void) => {
@@ -10,7 +10,7 @@ const subscribe = (notify: () => void) => {
 
 const parse = (hash: string) => {
   const [path = "", search = ""] = hash.replace(/^#\/?/, "").split("?");
-  const page: Page = PAGES.find((name) => name === path) ?? "jobs";
+  const page: Page = PAGES.find((name) => name === path) ?? "floor";
   return { page, job: new URLSearchParams(search).get("job") };
 };
 

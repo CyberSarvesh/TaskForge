@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@fontsource-variable/big-shoulders/index.css";
 import "@fontsource-variable/hanken-grotesk/index.css";
 import "./styles/base.css";
+import "./styles/floor.css";
 import "./styles/pages.css";
 import "./styles/overlays.css";
 import { App } from "./App";

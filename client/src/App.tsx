@@ -6,10 +6,12 @@ import { PAGES, useRoute } from "./lib/router";
 import type { Page } from "./lib/router";
 import { useTheme } from "./lib/theme";
 import { EngineeringPage } from "./pages/EngineeringPage";
+import { FloorPage } from "./pages/FloorPage";
 import { JobsPage } from "./pages/JobsPage";
 import { MetricsPage } from "./pages/MetricsPage";
 
 const NAV: Record<Page, string> = {
+  floor: "Floor",
   jobs: "Jobs",
   metrics: "Metrics",
   engineering: "Engineering",
@@ -23,7 +25,7 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <a className="brand" href="#/jobs">
+        <a className="brand" href="#/floor">
           <img src="/favicon.svg" alt="" width="30" height="30" />
           TaskForge
         </a>
@@ -45,6 +47,7 @@ export function App() {
       <SystemNotice />
 
       <main>
+        {page === "floor" && <FloorPage theme={theme} />}
         {page === "jobs" && <JobsPage />}
         {page === "metrics" && <MetricsPage />}
         {page === "engineering" && <EngineeringPage />}
