@@ -1,3 +1,4 @@
+import { migrateWithRetry } from "../db/migrate.ts";
 import { query } from "../db/postgres.ts";
 import { getNextJob } from "../services/queueService.ts";
 
@@ -55,4 +56,5 @@ const startWorker = async () => {
   }
 };
 
-startWorker();
+await migrateWithRetry();
+await startWorker();

@@ -1,22 +1,28 @@
-import { Pool } from "pg";
-import dotenv from "dotenv";
-dotenv.config();
+import pg from "pg";
+import type { QueryResultRow } from "pg";
+import { config } from "../config.ts";
+import { describeError, log } from "../lib/logger.ts";
 
-
-const pool = new Pool({
-  host: process.env.PGHOST || "localhost",
-  port: 5432,
-  user: process.env.PGADMIN_USERNAME || "postgres",
-  password: process.env.PGADMIN_PASSWORD || "postgres",
-  database: process.env.PGDATABASE || "TaskForge",
-});
-
-pool.on("connect", () => {
-  console.log("PostgreSQL connected");
-});
-
-export const query = (text: string, params?: any[]) => {
-  return pool.query(text, params);
+export const connection = {
+  host: config.PGHOST,
+  port: config.PGPORT,
+  user: config.PGADMIN_USERNAME,
+  password: config.PGADMIN_PASSWORD,
+  database: config.PGDATABASE,
+  connectionTimeoutMillis: 3000,
+  keepAlive: true,
 };
+
+const pool = new pg.Pool({ ...connection, max: 10, query_timeout: 10_000 });
+
+// Without these listeners, a database restart is an uncaught exception that kills the process.
+// The pool one covers idle clients; the client one covers clients that are checked out.
+pool.on("error", (error) => log.warn("postgres connection lost", { error: describeError(error) }));
+pool.on("connect", (client) => {
+  client.on("error", (error) => log.warn("postgres client error", { error: describeError(error) }));
+});
+
+export const query = <T extends QueryResultRow = any>(text: string, params?: unknown[]) =>
+  pool.query<T>(text, params);
 
 export default pool;
