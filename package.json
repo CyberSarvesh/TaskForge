@@ -1,0 +1,17 @@
+{
+  "name": "taskforge",
+  "version": "2.0.0",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "setup": "npm --prefix server ci",
+    "infra": "docker compose -f compose.dev.yaml up -d --wait",
+    "infra:down": "docker compose -f compose.dev.yaml down",
+    "typecheck": "npm --prefix server run typecheck",
+    "test": "npm --prefix server test",
+    "test:integration": "npm --prefix server run test:integration"
+  }
+}

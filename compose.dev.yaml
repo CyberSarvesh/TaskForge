@@ -1,0 +1,27 @@
+# Just the databases, for `npm run dev` and the integration tests.
+# Unusual host ports, so they don't collide with a Postgres or Redis you already run.
+name: taskforge-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: TaskForge
+    ports: ["127.0.0.1:55433:5432"]
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD, pg_isready, -h, 127.0.0.1, -U, postgres]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports: ["127.0.0.1:56380:6379"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      retries: 30
+
+volumes:
+  postgres:
