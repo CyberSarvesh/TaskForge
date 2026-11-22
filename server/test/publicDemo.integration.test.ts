@@ -21,7 +21,10 @@ test("public: typed text and unknown fields are never stored", async (t) => {
     ["/api/jobs", { type: "report", payload: { type: secret, [secret]: 1 } }],
     ["/api/jobs", { type: "hash", payload: { rounds: 1, note: secret } }],
   ] as const;
-  for (const [path, body] of bodies) assert.ok((await app.post(path, body)).status < 300);
+  for (const [index, [path, body]] of bodies.entries()) {
+    const headers = { "x-test-ip": `10.1.0.${index}`, "Idempotency-Key": `${secret}-${index}` };
+    assert.ok((await app.call(path, body, headers)).status < 300);
+  }
 
   const { rows } = await app.db.query("SELECT * FROM jobs");
   assert.equal(rows.length, bodies.length);
@@ -32,7 +35,7 @@ test("public: typed text and unknown fields are never stored", async (t) => {
 test("public: expensive jobs are refused", async (t) => {
   const app = await publicApp(t);
   const refused = [
-    { type: "hash", payload: { rounds: 41 } },
+    { type: "hash", payload: { rounds: 26 } },
     { type: "fault", payload: { durationMs: 10_001 } },
     { type: "report", maxAttempts: 6 },
     { type: "report", delayMs: 60_001 },
@@ -54,6 +57,21 @@ test("public: the active job cap holds under simultaneous requests", async (t) =
   assert.equal(replies.filter((reply) => reply.status === 202).length, 2);
   assert.equal(replies.filter((reply) => reply.body.code === "demo_full").length, 6);
   assert.equal((await app.db.query("SELECT count(*)::int AS n FROM jobs")).rows[0].n, 120);
+});
+
+test("public: finished jobs are pruned, live ones never", async (t) => {
+  const app = await publicApp(t);
+  await app.db.query(
+    "INSERT INTO jobs (id, type, payload, status) SELECT gen_random_uuid(), 'report', '{}', 'pending' FROM generate_series(1, 5)",
+  );
+  await app.db.query(
+    "INSERT INTO jobs (id, type, payload, status) SELECT gen_random_uuid(), 'report', '{}', 'completed' FROM generate_series(1, 1010)",
+  );
+  await until(
+    async () => (await app.db.query("SELECT 1 FROM jobs WHERE status = 'completed'")).rowCount === 1000,
+    "pruning", 45_000,
+  );
+  assert.equal((await app.db.query("SELECT 1 FROM jobs WHERE status = 'pending'")).rowCount, 5);
 });
 
 test("public: requeueing respects the cap", async (t) => {
@@ -80,6 +98,14 @@ test("public: health answers any Host and is never rate limited", async (t) => {
   const headers = { "x-test-ip": "203.0.113.50" };
   const replies = await Promise.all(Array.from({ length: 200 }, () => app.call("/api/health", undefined, headers)));
   assert.ok(replies.every((reply) => reply.status === 200));
+});
+
+test("public: a burst of lookups cannot take the database from other visitors", async (t) => {
+  const app = await publicApp(t);
+  const from = (ip: string) => app.call("/api/jobs", undefined, { "x-test-ip": ip });
+  const burst = await Promise.all(Array.from({ length: 80 }, () => from("203.0.113.20")));
+  assert.ok(burst.some((reply) => reply.body.code === "busy"));
+  assert.equal((await from("198.51.100.20")).status, 200, "another visitor is served");
 });
 
 test("public: one address cannot hold every live stream", async (t) => {

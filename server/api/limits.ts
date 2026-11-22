@@ -12,6 +12,38 @@ export const clientKey = (req: Request) => {
   return addressKey(forwarded ?? req.socket.remoteAddress ?? "");
 };
 
+const MAX_IN_FLIGHT = 12;
+const MAX_IN_FLIGHT_PER_ADDRESS = 4;
+
+/**
+ * A rate limit still lets a burst arrive in the same instant. On a tiny CPU that fills the Postgres
+ * pool, and then everyone's live view fails. Job lookups are the unshared, per-request queries, so
+ * only a few of them may run at once.
+ */
+export const limitLookups = (): RequestHandler => {
+  const perAddress = new Map<string, number>();
+  let total = 0;
+
+  return (req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    const client = clientKey(req);
+    const mine = perAddress.get(client) ?? 0;
+    if (total >= MAX_IN_FLIGHT || mine >= MAX_IN_FLIGHT_PER_ADDRESS) {
+      res.set("Retry-After", "1");
+      return next(new HttpError(429, "busy", "The demo is busy. Try again in a moment."));
+    }
+    total++;
+    perAddress.set(client, mine + 1);
+    res.on("close", () => {
+      total--;
+      const left = perAddress.get(client)! - 1;
+      if (left) perAddress.set(client, left);
+      else perAddress.delete(client);
+    });
+    next();
+  };
+};
+
 export const limitRequests = (): RequestHandler => {
   const reads = new RateLimiter(120, 3);
   const writes = new RateLimiter(15, 1 / 3);

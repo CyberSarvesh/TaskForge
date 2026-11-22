@@ -11,7 +11,7 @@ import { jobRoutes, legacyJobRoutes } from "../routes/jobs.ts";
 import { systemRoutes } from "../routes/system.ts";
 import type { EventStream } from "../services/eventStream.ts";
 import { errorHandler } from "./errorHandler.ts";
-import { limitRequests } from "./limits.ts";
+import { limitLookups, limitRequests } from "./limits.ts";
 import { checkHost, checkOrigin, securityHeaders } from "./security.ts";
 
 const clientBuild = fileURLToPath(new URL("../../client/dist", import.meta.url));
@@ -26,7 +26,10 @@ export const createApp = (redis: Redis, events: EventStream) => {
   app.get("/api/health", system.health);
 
   app.use(checkHost);
-  if (config.PUBLIC_DEMO) app.use(limitRequests());
+  if (config.PUBLIC_DEMO) {
+    app.use(limitRequests());
+    app.use(["/jobs", "/api/jobs"], limitLookups());
+  }
   if (config.CORS_ORIGINS.length) app.use(cors({ origin: config.CORS_ORIGINS }));
   app.use(checkOrigin, express.json({ limit: config.PUBLIC_DEMO ? "8kb" : "64kb" }));
 

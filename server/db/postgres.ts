@@ -13,7 +13,13 @@ export const connection = {
   keepAlive: true,
 };
 
-const pool = new pg.Pool({ ...connection, max: 10, query_timeout: 10_000 });
+const pool = new pg.Pool({
+  ...connection,
+  // This also bounds the wait for a free pool slot, which takes longer on the demo's tenth of a CPU.
+  connectionTimeoutMillis: config.PUBLIC_DEMO ? 8000 : connection.connectionTimeoutMillis,
+  max: 10,
+  query_timeout: 10_000,
+});
 
 // Without these listeners, a database restart is an uncaught exception that kills the process.
 // The pool one covers idle clients; the client one covers clients that are checked out.

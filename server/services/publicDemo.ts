@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { config } from "../config.ts";
 import { query } from "../db/postgres.ts";
 import { HttpError } from "../lib/errors.ts";
@@ -16,7 +17,7 @@ export const LIMITS = {
   events: 20_000,
   maxAttempts: 5,
   delayMs: 60_000,
-  fieldMax: { rounds: 40, durationMs: 10_000 } as Record<string, number>,
+  fieldMax: { rounds: 25, durationMs: 10_000 } as Record<string, number>,
 };
 
 const isText = (field: Field) => field.kind === "text" || field.kind === "email";
@@ -45,7 +46,9 @@ export const restrictJob = (job: NewJob, definition: JobDefinition): NewJob => {
     if (max !== undefined && Number(value) > max) throw tooBig(field.name, max);
     payload[field.name] = value;
   }
-  return { ...job, payload };
+  // The key is caller-chosen text as well. A digest does the same work.
+  const idempotencyKey = job.idempotencyKey && createHash("sha256").update(job.idempotencyKey).digest("hex");
+  return { ...job, payload, idempotencyKey };
 };
 
 let admission: Promise<unknown> = Promise.resolve();
