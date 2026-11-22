@@ -1,7 +1,8 @@
 // Runs the API, a crew of workers and the Vite dev server as one command.
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { parseEnv } from "node:util";
 
 const server = fileURLToPath(new URL("../server/", import.meta.url));
 const client = fileURLToPath(new URL("../client/", import.meta.url));
@@ -12,18 +13,23 @@ if (!existsSync(vite) || !existsSync(`${server}node_modules`)) {
   process.exit(1);
 }
 
-if (existsSync(`${server}.env`)) process.loadEnvFile(`${server}.env`);
+const fromFile = existsSync(`${server}.env`) ? parseEnv(readFileSync(`${server}.env`, "utf8")) : {};
 
-// Defaults match `npm run infra`. Anything already in the environment or server/.env wins.
+// The databases are always those of `npm run infra` unless server/.env says otherwise. A PGPORT
+// left in the shell must not send migrations to some other server, so it does not count.
 const env = {
-  PORT: "4000",
-  PGHOST: "127.0.0.1",
-  PGPORT: "55433",
-  REDIS_HOST: "127.0.0.1",
-  REDIS_PORT: "56380",
   DEMO_MODE: "true",
   LEASE_MS: "6000",
   ...process.env,
+  PORT: "4000",
+  PGHOST: "127.0.0.1",
+  PGPORT: "55433",
+  PGADMIN_USERNAME: "postgres",
+  PGADMIN_PASSWORD: "postgres",
+  PGDATABASE: "TaskForge",
+  REDIS_HOST: "127.0.0.1",
+  REDIS_PORT: "56380",
+  ...fromFile,
 };
 
 const WORKERS = Number(env.WORKERS ?? 3);
