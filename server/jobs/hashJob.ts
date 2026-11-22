@@ -1,9 +1,12 @@
 import { randomBytes, scrypt } from "node:crypto";
-import { promisify } from "node:util";
 import { z } from "zod";
+import { config } from "../config.ts";
 import { defineJob } from "./types.ts";
 
-const derive = promisify(scrypt);
+const derive = (key: Buffer) =>
+  new Promise<Buffer>((resolve, reject) => {
+    scrypt(key, "taskforge", 32, { N: config.HASH_COST }, (error, derived) => (error ? reject(error) : resolve(derived)));
+  });
 
 export const hashJob = defineJob({
   title: "Derive keys",
@@ -13,10 +16,10 @@ export const hashJob = defineJob({
   fields: [{ name: "rounds", label: "Rounds", kind: "number", default: 20, min: 1, max: 100 }],
   async run({ rounds }, { signal }) {
     const started = performance.now();
-    let key = randomBytes(32);
+    let key: Buffer = randomBytes(32);
     for (let round = 0; round < rounds; round++) {
       signal.throwIfAborted();
-      key = (await derive(key, "taskforge", 32)) as typeof key;
+      key = await derive(key);
     }
     return { rounds, digest: key.toString("hex"), cpuMs: Math.round(performance.now() - started) };
   },

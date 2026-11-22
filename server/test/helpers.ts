@@ -10,13 +10,15 @@ import { Redis } from "ioredis";
 import pg from "pg";
 
 // Defaults match `npm run infra` at the repository root. Every test gets its own database and prefix.
+// The usual PG* and REDIS_* variables are ignored on purpose: these tests create and drop databases,
+// and a PGPORT in someone's shell must not point them at that person's own server.
 export const infra = {
-  host: process.env.PGHOST ?? "127.0.0.1",
-  port: Number(process.env.PGPORT ?? 55433),
-  user: process.env.PGADMIN_USERNAME ?? "postgres",
-  password: process.env.PGADMIN_PASSWORD ?? "postgres",
-  redisHost: process.env.REDIS_HOST ?? "127.0.0.1",
-  redisPort: Number(process.env.REDIS_PORT ?? 56380),
+  host: process.env.TEST_PGHOST ?? "127.0.0.1",
+  port: Number(process.env.TEST_PGPORT ?? 55433),
+  user: process.env.TEST_PGUSER ?? "postgres",
+  password: process.env.TEST_PGPASSWORD ?? "postgres",
+  redisHost: process.env.TEST_REDIS_HOST ?? "127.0.0.1",
+  redisPort: Number(process.env.TEST_REDIS_PORT ?? 56380),
 };
 
 const serverDir = fileURLToPath(new URL("..", import.meta.url));

@@ -1,15 +1,19 @@
 import type { Request, Response } from "express";
 import pg from "pg";
+import { clientKey } from "../api/limits.ts";
+import { config } from "../config.ts";
 import { connection } from "../db/postgres.ts";
 import { describeError, log } from "../lib/logger.ts";
 
 const CHANNEL = "taskforge_events";
 const MAX_CLIENTS = 100;
+const MAX_CLIENTS_PER_ADDRESS = 8;
 const MAX_BUFFER_BYTES = 1024 * 1024;
 
 /** Fans Postgres NOTIFY out to browsers over Server-Sent Events. */
 export class EventStream {
   #clients = new Set<Response>();
+  #perAddress = new Map<string, number>();
   #listener: pg.Client | null = null;
   #reconnect: NodeJS.Timeout | undefined;
   #ping: NodeJS.Timeout | undefined;
@@ -66,6 +70,20 @@ export class EventStream {
     if (this.#clients.size >= MAX_CLIENTS) {
       response.status(503).json({ error: "Too many live connections", code: "stream_full" });
       return;
+    }
+    if (config.PUBLIC_DEMO) {
+      const key = clientKey(request);
+      const open = this.#perAddress.get(key) ?? 0;
+      if (open >= MAX_CLIENTS_PER_ADDRESS) {
+        response.status(429).json({ error: "Too many live connections from this address", code: "stream_limit" });
+        return;
+      }
+      this.#perAddress.set(key, open + 1);
+      response.on("close", () => {
+        const left = this.#perAddress.get(key)! - 1;
+        if (left) this.#perAddress.set(key, left);
+        else this.#perAddress.delete(key);
+      });
     }
     response.writeHead(200, {
       "Content-Type": "text/event-stream",

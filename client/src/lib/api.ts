@@ -30,7 +30,7 @@ const post = <T,>(path: string, body?: unknown) =>
 
 export const api = {
   meta: () => request<Meta>("/meta"),
-  snapshot: () => request<Omit<Snapshot, "requestedAt">>("/snapshot"),
+  snapshot: () => request<Omit<Snapshot, "requestedAt"> & { ageMs?: number }>("/snapshot"),
   jobs: (params: URLSearchParams) => request<{ items: Job[]; nextCursor: string | null }>(`/jobs?${params}`),
   job: (id: string) => request<{ job: Job; events: HistoryEvent[] }>(`/jobs/${encodeURIComponent(id)}`),
   create: (body: unknown) => post<{ job: Job }>("/jobs", body),

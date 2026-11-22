@@ -87,10 +87,13 @@ export interface Field {
   default: string | number | boolean;
   min?: number;
   max?: number;
+  /** The public demo does not accept typed text. */
+  locked?: boolean;
 }
 
 export interface Meta {
   demo: boolean;
+  publicDemo: boolean;
   leaseMs: number;
   types: { type: string; title: string; description: string; timeoutMs: number; fields: Field[] }[];
   scenarios: { name: string; title: string; description: string }[];

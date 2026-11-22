@@ -14,8 +14,8 @@
     "worker": "node worker/worker.ts",
     "start": "node api/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test test/policy.test.ts test/validation.test.ts",
-    "test:integration": "node --test --test-concurrency=1 test/migration.integration.test.ts test/store.integration.test.ts test/system.integration.test.ts"
+    "test": "node --test test/policy.test.ts test/validation.test.ts test/limits.test.ts",
+    "test:integration": "node --test --test-concurrency=1 test/migration.integration.test.ts test/store.integration.test.ts test/system.integration.test.ts test/publicDemo.integration.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",

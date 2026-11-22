@@ -1,0 +1,14 @@
+# Render Blueprint for the free public demo. See deploy/render/README.md.
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+
+services:
+  - type: web
+    name: taskforge
+    runtime: docker
+    # Keep this line. Without it Render creates a paid instance.
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass

@@ -83,7 +83,7 @@ export function Composer({ onClose }: { onClose: () => void }) {
           </fieldset>
           <p className="hint">{definition.description}</p>
 
-          {definition.fields.map(({ name, label, kind, min, max }) =>
+          {definition.fields.map(({ name, label, kind, min, max, locked }) =>
             kind === "boolean" ? (
               <label className="check" key={`${definition.type}.${name}`}>
                 <input type="checkbox" checked={values[name] === true} onChange={(e) => edit(name, e.target.checked)} />
@@ -97,11 +97,16 @@ export function Composer({ onClose }: { onClose: () => void }) {
                   required
                   min={min}
                   max={max}
+                  readOnly={locked}
                   value={String(values[name])}
                   onChange={(e) => edit(name, e.target.value)}
                 />
               </label>
             ),
+          )}
+
+          {definition.fields.some((field) => field.locked) && (
+            <p className="hint">Text is fixed in the public demo, because every visitor can see every job.</p>
           )}
 
           <div className="field-row">
@@ -115,11 +120,11 @@ export function Composer({ onClose }: { onClose: () => void }) {
             </label>
             <label className="field">
               Delay (seconds)
-              <input type="number" required min="0" max="604800" value={delay} onChange={(e) => setDelay(e.target.value)} />
+              <input type="number" required min="0" max={meta!.publicDemo ? 60 : 604800} value={delay} onChange={(e) => setDelay(e.target.value)} />
             </label>
             <label className="field">
               Max attempts
-              <input type="number" required min="1" max="20" value={attempts} onChange={(e) => setAttempts(e.target.value)} />
+              <input type="number" required min="1" max={meta!.publicDemo ? 5 : 20} value={attempts} onChange={(e) => setAttempts(e.target.value)} />
             </label>
           </div>
 

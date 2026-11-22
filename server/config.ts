@@ -32,10 +32,21 @@ const schema = z.object({
   HEARTBEAT_MS: z.coerce.number().int().min(100).default(1000),
   SWEEP_MS: z.coerce.number().int().min(100).default(1000),
   REDISPATCH_MS: z.coerce.number().int().min(500).default(5000),
+  // scrypt's N. Each step down halves the CPU and memory used by one round of a hash job.
+  HASH_COST: z.coerce
+    .number()
+    .int()
+    .min(256)
+    .max(16_384)
+    .refine((value) => Number.isInteger(Math.log2(value)), "must be a power of two")
+    .default(16_384),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(8000),
 
-  // Enables the scenario and crash-a-worker endpoints. Never enable on a public deployment.
+  // Enables the scenario and crash-a-worker endpoints. In public, only together with PUBLIC_DEMO.
   DEMO_MODE: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  // Guardrails for a demo shared by anonymous visitors: rate limits, caps, pruning, no free text.
+  PUBLIC_DEMO: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  CLIENT_IP_HEADER: z.string().min(1).optional(),
 });
 
 const parsed = schema.safeParse(process.env);
