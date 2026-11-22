@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "node:crypto";
 import { query } from "../db/postgres.ts";
 import { addJobToQueue } from "../services/queueService.ts";
 
 export const createJob = async (req: Request, res: Response) => {
-  const id = uuidv4();
+  const id = randomUUID();
   const { type, payload } = req.body;
 
   await query(
@@ -27,7 +27,8 @@ export const getJob = async (req: Request, res: Response) => {
   );
 
   if (result.rows.length === 0) {
-    return res.status(404).json({ error: "Job not found" });
+    res.status(404).json({ error: "Job not found" });
+    return;
   }
 
   res.json(result.rows[0]);

@@ -75,10 +75,10 @@ npm i
 ```
 Start the server
 ```
-npx ts-node api/server.ts
+npm run dev
 ```
 Run the Workers
 
 ```
-npx ts-node worker/worker.ts
+npm run worker
 ```

@@ -1,4 +1,3 @@
-import redis from "../redis/redisClient.ts";
 import { query } from "../db/postgres.ts";
 import { getNextJob } from "../services/queueService.ts";
 

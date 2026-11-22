@@ -10,7 +10,7 @@ app.use(express.json());
 
 app.use("/jobs", jobRoutes);
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("TaskForge API running");
 });
 
