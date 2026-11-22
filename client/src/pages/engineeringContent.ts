@@ -114,8 +114,8 @@ export const tradeoffs: [string, string][] = [
     "A short lease recovers faster but mistakes slow workers for dead ones. The default is 10 seconds.",
   ],
   [
-    "No authentication",
-    "It binds to localhost and checks Host and Origin. Put it behind an authenticating proxy before exposing it.",
+    "No accounts",
+    "A shared public demo needs its guardrails on: rate limits, caps and no visitor-typed text. Anything real needs an authenticating proxy.",
   ],
   [
     "Events are kept forever",

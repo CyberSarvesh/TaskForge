@@ -60,9 +60,10 @@ export function App() {
 }
 
 function SystemNotice() {
-  const { reachable, snapshot, streaming } = useLive();
+  const { reachable, snapshot, streaming, paused } = useLive();
   let message = "";
-  if (!reachable) message = "Can't reach the API or its database. Retrying every 2 seconds.";
+  if (paused) message = "Live updates paused to save bandwidth. Move the pointer or press a key to resume.";
+  else if (!reachable) message = "Can't reach the API or its database. Retrying every 2 seconds.";
   else if (snapshot && !snapshot.redis.up) {
     message = "Redis is down. New jobs are still saved in Postgres and will be dispatched when it returns.";
   } else if (snapshot && !streaming) message = "Live stream interrupted. Showing updates every 2 seconds.";

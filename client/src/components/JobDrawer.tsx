@@ -9,7 +9,7 @@ import { StatusMark } from "./StatusMark";
 import { useNotify } from "./Toasts";
 
 export function JobDrawer({ id }: { id: string }) {
-  const { subscribe, refresh } = useLive();
+  const { subscribe, refresh, streaming } = useLive();
   const notify = useNotify();
   const [data, setData] = useState<{ job: Job; events: HistoryEvent[] }>();
   const [error, setError] = useState("");
@@ -31,7 +31,7 @@ export function JobDrawer({ id }: { id: string }) {
     return () => {
       current = false;
     };
-  }, [id, version]);
+  }, [id, version, streaming]); // events are missed while the stream is down, so reload when it returns
 
   const act = async (action: "cancel" | "retry") => {
     setBusy(true);

@@ -26,6 +26,7 @@ dialog::backdrop { background: rgb(6 20 17 / 0.5); }
 .type-picker label:has(:focus-visible) { outline: 3px solid var(--series-errors); outline-offset: 2px; }
 .type-picker input { position: absolute; opacity: 0; pointer-events: none; }
 .field-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.composer input[readonly] { background: transparent; color: var(--muted); }
 .check { display: flex; gap: 8px; align-items: center; }
 .check input { width: 18px; height: 18px; }
 .request-preview h3 { margin-bottom: 8px; font-size: 0.875rem; }

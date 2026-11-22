@@ -5,6 +5,12 @@ import type { LiveEvent, Meta, Snapshot } from "./types";
 
 const POLL_MS = 2000;
 const MIN_GAP_MS = 700;
+// The public demo lives on a small bandwidth allowance, and every request also keeps the host awake.
+const PUBLIC_QUIET_POLL_MS = 10_000;
+const PUBLIC_MIN_GAP_MS = 2000;
+const PUBLIC_IDLE_MS = 5 * 60_000;
+const STREAM_RETRY_MS = 5000;
+const ACTIVITY = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
 const LOG_LENGTH = 40;
 
 type Listener = (event: LiveEvent) => void;
@@ -15,6 +21,7 @@ interface Live {
   recent: LiveEvent[];
   reachable: boolean;
   streaming: boolean;
+  paused: boolean;
   subscribe: (listener: Listener) => () => void;
   refresh: () => void;
 }
@@ -32,6 +39,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [recent, setRecent] = useState<LiveEvent[]>([]);
   const [reachable, setReachable] = useState(true);
   const [streaming, setStreaming] = useState(false);
+  const [paused, setPaused] = useState(false);
   const listeners = useRef(new Set<Listener>());
   const refreshRef = useRef(() => {});
 
@@ -42,8 +50,17 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     let again = false;
     let lastStart = 0;
     let haveMeta = false;
+    let publicDemo = false;
+    let stopped = true;
+    let streamOpen = false;
+    let quiet = false;
+    let source: EventSource | undefined;
+    let streamTimer = 0;
+    let idleTimer = 0;
 
     const load = async () => {
+      clearTimeout(timer);
+
       inFlight = true;
       again = false;
       lastStart = performance.now();
@@ -51,20 +68,29 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         if (!haveMeta) {
           const value = await api.meta();
           haveMeta = true;
-          if (!disposed) setMeta(value);
+          publicDemo = value.publicDemo;
+          if (disposed) return;
+          setMeta(value);
+          watchForIdle();
         }
-        const requestedAt = performance.now();
-        const value = await api.snapshot();
+        const sentAt = performance.now();
+        const { ageMs = 0, ...value } = await api.snapshot();
         if (disposed) return;
-        setSnapshot({ ...value, requestedAt });
+        const { pending, scheduled, processing } = value.counts;
+        quiet = pending + scheduled + processing === 0 && value.workers.every((worker) => worker.online);
+        // A shared snapshot may predate the request, and events since then must win over it.
+        setSnapshot({ ...value, requestedAt: sentAt - ageMs });
         setReachable(true);
       } catch {
         if (!disposed) setReachable(false);
       } finally {
         inFlight = false;
-        if (!disposed) schedule(again ? MIN_GAP_MS : POLL_MS);
+        if (!disposed && !stopped) schedule(again ? minGap() : pollGap());
       }
     };
+
+    const minGap = () => (publicDemo ? PUBLIC_MIN_GAP_MS : MIN_GAP_MS);
+    const pollGap = () => (publicDemo && quiet && streamOpen ? PUBLIC_QUIET_POLL_MS : POLL_MS);
 
     const schedule = (gap: number) => {
       clearTimeout(timer);
@@ -72,8 +98,9 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     };
 
     const refresh = () => {
+      if (stopped) return;
       if (inFlight) again = true;
-      else schedule(MIN_GAP_MS);
+      else schedule(minGap());
     };
     refreshRef.current = refresh;
 
@@ -86,27 +113,79 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       setRecent((previous) => [...batch, ...previous].slice(0, LOG_LENGTH));
     };
 
-    const source = new EventSource("/api/events");
-    source.addEventListener("resync", () => {
-      setStreaming(true);
-      refresh();
-    });
-    source.addEventListener("job", (message) => {
-      const event = JSON.parse(message.data) as LiveEvent;
-      for (const listener of listeners.current) listener(event);
-      buffer.push(event);
-      if (buffer.length > LOG_LENGTH) buffer.shift();
-      frame ||= requestAnimationFrame(flush);
-      refresh();
-    });
-    source.onerror = () => setStreaming(false);
+    const openStream = () => {
+      const stream = new EventSource("/api/events");
+      source = stream;
+      stream.addEventListener("resync", () => {
+        streamOpen = true;
+        setStreaming(true);
+        refresh();
+      });
+      stream.addEventListener("job", (message) => {
+        const event = JSON.parse(message.data) as LiveEvent;
+        for (const listener of listeners.current) listener(event);
+        buffer.push(event);
+        if (buffer.length > LOG_LENGTH) buffer.shift();
+        frame ||= requestAnimationFrame(flush);
+        refresh();
+      });
+      stream.onerror = () => {
+        streamOpen = false;
+        setStreaming(false);
+        // EventSource gives up for good on any non-200, such as a 502 while the host restarts.
+        if (stream.readyState === EventSource.CLOSED) streamTimer = window.setTimeout(openStream, STREAM_RETRY_MS);
+      };
+    };
 
-    void load();
+    const pause = () => {
+      if (stopped) return;
+      stopped = true;
+      streamOpen = false;
+      source?.close();
+      clearTimeout(timer);
+      clearTimeout(streamTimer);
+      setStreaming(false);
+      setPaused(true);
+    };
+
+    const resume = () => {
+      if (!stopped || document.hidden) return;
+      stopped = false;
+      setPaused(false);
+      openStream();
+      if (inFlight) again = true;
+      else void load();
+    };
+
+    const watchForIdle = () => {
+      clearTimeout(idleTimer);
+      if (publicDemo) idleTimer = window.setTimeout(pause, PUBLIC_IDLE_MS);
+    };
+
+    const onActivity = () => {
+      watchForIdle();
+      resume();
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) pause();
+      else onActivity();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    for (const name of ACTIVITY) window.addEventListener(name, onActivity, { passive: true });
+    if (document.hidden) setPaused(true);
+    else resume();
+
     return () => {
       disposed = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      for (const name of ACTIVITY) window.removeEventListener(name, onActivity);
       clearTimeout(timer);
+      clearTimeout(streamTimer);
+      clearTimeout(idleTimer);
       cancelAnimationFrame(frame);
-      source.close();
+      source?.close();
     };
   }, []);
 
@@ -117,8 +196,8 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(() => refreshRef.current(), []);
 
   const value = useMemo(
-    () => ({ meta, snapshot, recent, reachable, streaming, subscribe, refresh }),
-    [meta, snapshot, recent, reachable, streaming, subscribe, refresh],
+    () => ({ meta, snapshot, recent, reachable, streaming, paused, subscribe, refresh }),
+    [meta, snapshot, recent, reachable, streaming, paused, subscribe, refresh],
   );
   return <LiveContext value={value}>{children}</LiveContext>;
 }
