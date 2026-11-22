@@ -1,0 +1,115 @@
+.floor-page { flex: 1; display: flex; flex-direction: column; }
+
+.floor-stage { position: relative; flex: 1; min-height: 440px; overflow: hidden; }
+.floor-canvas { position: absolute; inset: 0; }
+.floor-canvas canvas { display: block; width: 100%; height: 100%; }
+
+/* The isometric diamond leaves two empty corners, top right and bottom left. The copy lives there. */
+.floor-intro {
+  position: absolute;
+  top: 28px;
+  right: 28px;
+  width: min(390px, 29%);
+  text-align: right;
+  pointer-events: none;
+}
+.floor-intro h1 { font-size: clamp(38px, 4.6vw, 76px); font-weight: 850; line-height: 0.92; }
+.floor-intro p { margin: 14px 0 0 auto; max-width: 31ch; color: var(--muted); }
+
+.floor-side {
+  position: absolute;
+  left: 28px;
+  bottom: 20px;
+  width: min(350px, 28%);
+  pointer-events: none;
+}
+.totals { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 12px; }
+.totals div { display: flex; flex-direction: column; }
+.totals dt { font-size: 0.8125rem; color: var(--muted); }
+.totals dd { margin: 0; min-height: 34px; font: 800 34px/1 var(--display); font-variant-numeric: tabular-nums; }
+
+.shift-log { height: 135px; margin: 0; padding: 0; overflow: hidden; list-style: none; }
+.shift-log button {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.8125rem;
+  text-align: left;
+  pointer-events: auto;
+}
+.shift-log button:hover .log-kind { text-decoration: underline; }
+.shift-log time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.log-kind { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+.log-kind.completed { color: var(--good); }
+.log-kind.failed, .log-kind.retrying, .log-kind.recovered { color: var(--bad); }
+.shift-log code { color: var(--muted); }
+
+.worker-tag {
+  position: absolute;
+  translate: -50% -100%;
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bar);
+  color: var(--bar-ink);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.worker-tag span, .worker-tag b { padding: 4px 8px; }
+.worker-tag.offline { background: #a52a12; color: #fff; }
+.worker-tag button {
+  align-self: stretch;
+  padding: 4px 8px;
+  border: 0;
+  border-left: 1px solid #ffffff30;
+  background: none;
+  color: var(--molten);
+}
+.worker-tag button:hover { background: #a52a12; color: #fff; }
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--bar);
+  color: var(--bar-ink);
+}
+.controls button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 78px;
+  padding: 10px 22px;
+  border: 0;
+  background: none;
+  text-align: left;
+  line-height: 1.25;
+}
+.controls button + button { border-left: 1px solid #ffffff1c; }
+.controls button:hover:not(:disabled) { background: var(--molten); color: var(--molten-ink); }
+.controls strong { font: 750 23px/1.1 var(--display); }
+.controls span { font-size: 0.8125rem; opacity: 0.85; }
+
+@media (max-width: 1180px) {
+  .floor-stage { display: flex; flex-direction: column; min-height: 0; }
+  .floor-intro { order: 1; position: static; width: auto; padding: 20px 16px 0; text-align: left; }
+  .floor-intro h1 { font-size: 42px; }
+  .floor-intro p { margin: 8px 0 0; max-width: 60ch; }
+  .floor-canvas { order: 2; position: relative; inset: auto; width: 100%; aspect-ratio: 1.45; max-height: 64dvh; flex-shrink: 0; }
+  .shift-log { height: auto; max-height: 135px; }
+  .floor-side { order: 3; position: static; width: auto; padding: 4px 16px 16px; }
+  .controls { grid-template-columns: repeat(2, 1fr); }
+  .controls button { min-height: 64px; padding: 10px 16px; }
+  .controls button:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .worker-tag { font-size: 0.625rem; }
+  .worker-tag span, .worker-tag b, .worker-tag button { padding: 2px 4px; }
+}

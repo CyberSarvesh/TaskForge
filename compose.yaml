@@ -1,0 +1,64 @@
+# The whole system: docker compose up --build, then open http://localhost:4000
+name: taskforge
+
+x-app: &app
+  image: taskforge:local
+  pull_policy: never
+  environment: &env
+    PGHOST: postgres
+    PGADMIN_PASSWORD: postgres
+    REDIS_HOST: redis
+    DEMO_MODE: "true"
+    LEASE_MS: "6000"
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  restart: unless-stopped
+  stop_grace_period: 15s
+
+x-worker: &worker
+  <<: *app
+  command: [node, worker/worker.ts]
+
+services:
+  api:
+    <<: *app
+    build: .
+    pull_policy: build
+    environment:
+      <<: *env
+      HOST: 0.0.0.0
+      PORT: "4000"
+    # Loopback only, because TaskForge has no authentication.
+    ports: ["127.0.0.1:${TASKFORGE_PORT:-4000}:4000"]
+
+  anvil-1:
+    <<: *worker
+    environment: { <<: *env, WORKER_NAME: anvil-1 }
+  anvil-2:
+    <<: *worker
+    environment: { <<: *env, WORKER_NAME: anvil-2 }
+  anvil-3:
+    <<: *worker
+    environment: { <<: *env, WORKER_NAME: anvil-3 }
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: TaskForge
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD, pg_isready, -h, 127.0.0.1, -U, postgres]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      retries: 30
+
+volumes:
+  postgres:
