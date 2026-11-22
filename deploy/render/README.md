@@ -33,7 +33,7 @@ example `taskforge.example.com`. Separate several with commas.
 | | |
 | --- | --- |
 | Sleep | After 15 minutes without requests |
-| Wake-up | Render quotes about a minute. At 0.1 CPU the app itself took 13 to 18 seconds to answer and about 50 until all workers were up |
+| Wake-up | Render quotes about a minute. At 0.1 CPU the app itself took 13 to 28 seconds to answer and 50 to 90 until all workers were up |
 | Data | Reset on every sleep, restart and deploy |
 | Hours | 750 a month, enough for one service. Other free services in the workspace share them |
 | Bandwidth | 5 GB a month. A two minute visit measured about 0.5 MB, so very roughly 10,000 visits |
