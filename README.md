@@ -17,6 +17,8 @@ docker compose up --build
 
 Open <http://localhost:4000>, press **Rush order**, then **Kill** one of the workers.
 
+To host it free as a public demo, see [deploy/render](deploy/render/README.md).
+
 ## 📝 Description
 
 TaskForge is a background job processing system that lets a backend server handle long-running tasks
@@ -98,7 +100,9 @@ npm run test:integration
 npm run typecheck
 ```
 
-`npm test` needs nothing running. `npm run test:integration` needs `npm run infra`.
+`npm test` needs nothing running. `npm run test:integration` needs `npm run infra`. Both that and
+`npm run dev` ignore `PG*` and `REDIS_*` variables in your shell, so they can't land on your own databases.
+Override with `TEST_PG*` for tests, or `server/.env` for the dev runner.
 
 To run the pieces yourself against your own Postgres and Redis, copy `server/.env.example` to
 `server/.env`, then:
@@ -176,7 +180,8 @@ client/src/
   idempotent. No queue can promise exactly-once side effects.
 - **Email is simulated.** The report and hash jobs do real work.
 - **No authentication.** Ports bind to loopback, and Host and Origin are checked. Use an authenticating
-  proxy before exposing it, and turn `DEMO_MODE` off.
+  proxy before exposing it, and turn `DEMO_MODE` off. The exception is a throwaway public demo with
+  `PUBLIC_DEMO` on, which adds rate limits and caps and refuses visitor-typed text.
 - **Throughput is bounded by Postgres**, which is written on every transition. `NOTIFY` also serialises
   commits. Both are fine at this scale and would be the first things to change at a much larger one.
 - **Events are never pruned.** A busy deployment needs a retention job.

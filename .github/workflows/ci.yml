@@ -39,3 +39,11 @@ jobs:
       - run: npm test
       - run: npm run test:integration
       - run: npm run build
+
+  demo-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/render/Dockerfile -t taskforge-demo .
+      - run: sh deploy/render/smoke.sh taskforge-demo
