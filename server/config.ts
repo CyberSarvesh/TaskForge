@@ -42,8 +42,11 @@ const schema = z.object({
     .default(16_384),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(8000),
 
-  // Enables the scenario and crash-a-worker endpoints. Never enable on a public deployment.
+  // Enables the scenario and crash-a-worker endpoints. In public, only together with PUBLIC_DEMO.
   DEMO_MODE: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  // Guardrails for a demo shared by anonymous visitors: rate limits, caps, pruning, no free text.
+  PUBLIC_DEMO: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  CLIENT_IP_HEADER: z.string().min(1).optional(),
 });
 
 const parsed = schema.safeParse(process.env);

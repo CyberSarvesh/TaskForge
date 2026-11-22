@@ -5,6 +5,7 @@ import { describeError, log } from "../lib/logger.ts";
 import { PRIORITIES } from "../lib/policy.ts";
 import { getDefinition } from "../jobs/registry.ts";
 import * as store from "./jobStore.ts";
+import { restrictJob, withRoom } from "./publicDemo.ts";
 import { enqueue } from "./queueService.ts";
 
 const requestSchema = z.object({
@@ -28,11 +29,12 @@ export const buildJob = (body: unknown, idempotencyKey?: string): store.NewJob =
   const request = parse(requestSchema, body);
   const definition = getDefinition(request.type);
   if (!definition) throw new HttpError(400, "unknown_type", `Unknown job type "${request.type}"`);
-  return {
+  const job = {
     ...request,
     payload: parse(definition.schema, request.payload ?? {}, "payload"),
     idempotencyKey: parse(keySchema, idempotencyKey, "Idempotency-Key"),
   };
+  return restrictJob(job, definition);
 };
 
 /**
@@ -54,7 +56,7 @@ const dispatch = async (redis: Redis, jobs: store.Job[]) => {
 };
 
 export const submitMany = async (redis: Redis, jobs: store.NewJob[]) => {
-  const created = await store.insertJobs(jobs);
+  const created = await withRoom(jobs.length, () => store.insertJobs(jobs));
   await dispatch(redis, created);
   return created;
 };
@@ -86,7 +88,7 @@ export const cancel = async (id: string) => {
 };
 
 export const retry = async (redis: Redis, id: string) => {
-  const job = await store.requeueJob(id);
+  const job = await withRoom(1, () => store.requeueJob(id));
   if (!job) throw await explainMiss(id, "retry");
   await dispatch(redis, [job]);
   return job;

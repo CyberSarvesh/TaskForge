@@ -4,7 +4,6 @@ import type { createSystemController } from "../controllers/systemController.ts"
 
 export const systemRoutes = (controller: ReturnType<typeof createSystemController>) => {
   const router = express.Router();
-  router.get("/health", controller.health);
   router.get("/meta", controller.meta);
   router.get("/snapshot", controller.snapshot);
   if (config.DEMO_MODE) {
