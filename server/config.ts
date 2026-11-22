@@ -32,6 +32,14 @@ const schema = z.object({
   HEARTBEAT_MS: z.coerce.number().int().min(100).default(1000),
   SWEEP_MS: z.coerce.number().int().min(100).default(1000),
   REDISPATCH_MS: z.coerce.number().int().min(500).default(5000),
+  // scrypt's N. Each step down halves the CPU and memory used by one round of a hash job.
+  HASH_COST: z.coerce
+    .number()
+    .int()
+    .min(256)
+    .max(16_384)
+    .refine((value) => Number.isInteger(Math.log2(value)), "must be a power of two")
+    .default(16_384),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(8000),
 
   // Enables the scenario and crash-a-worker endpoints. Never enable on a public deployment.
